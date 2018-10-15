@@ -1,0 +1,94 @@
+{
+  "variables": {
+    "vm_name": "macos-13",
+    "autologin": "true",
+    "chef_version": "none",
+    "install_vagrant_keys": "true",
+    "iso_url": "./output/macos-10.13.iso",
+    "output_directory": "{{env `PACKER_OUTPUT_DIR`}}",
+    "password": "vagrant",
+    "provisioning_delay": "0",
+    "update_system": "true",
+    "username": "vagrant",
+    "vagrant_box_directory": "{{env `PACKER_VAGRANT_BOX_DIR`}}"
+  },
+  "builders": [
+    {
+      "type": "vmware-iso",
+      "guest_os_type": "darwin17-64",
+      "vm_name": "{{ user `vm_name` }}",
+      "boot_wait": "2s",
+      "disk_size": 40960,
+      "iso_checksum_type": "none",
+      "iso_url": "{{user `iso_url`}}",
+      "output_directory": "{{user `output_directory`}}",
+      "shutdown_command": "echo '{{user `username`}}'|sudo -S shutdown -h now",
+      "skip_compaction": true,
+      "ssh_port": 22,
+      "ssh_username": "{{user `username`}}",
+      "ssh_password": "{{user `password`}}",
+      "ssh_wait_timeout": "10000s",
+      "tools_upload_flavor": "darwin",
+      "vmx_data": {
+        "cpuid.coresPerSocket": "1",
+        "memsize": "4096",
+        "numvcpus": "2",
+        "firmware": "efi",
+        "keyboardAndMouseProfile": "macProfile",
+        "smc.present": "TRUE",
+        "hpet0.present": "TRUE",
+        "ich7m.present": "TRUE",
+        "ehci.present": "TRUE",
+        "usb.present": "TRUE"
+      }
+    }
+  ],
+  "min_packer_version": "0.7.0",
+  "provisioners": [
+    {
+      "type": "shell-local",
+      "command": "sleep {{user `provisioning_delay`}}"
+    },
+    {
+      "destination": "/private/tmp/set_kcpassword.py",
+      "source": "./scripts/timsutton/support/set_kcpassword.py",
+      "type": "file"
+    },
+    {
+      "execute_command": "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}",
+      "scripts": [
+        "./scripts/mcandre/elevate.macos.sh",
+        "./scripts/mcandre/ssh-configure-vagrant-key.macos.sh",
+        "./scripts/mcandre/fix-rsync.macos.sh",
+        "./scripts/mcandre/strip-services.macos.sh",
+        "./scripts/Sauraus/vagrant.sh",
+        "./scripts/timsutton/vmware.sh",
+        "./scripts/timsutton/chef-omnibus.sh",
+        "./scripts/timsutton/add-network-interface-detection.sh",
+        "./scripts/timsutton/autologin.sh",
+        "./scripts/Brantone/cleanup.macos.sh",
+        "./scripts/timsutton/system-update.sh",
+        "./scripts/Brantone/osx_config.sh",
+        "./scripts/Brantone/shrink.macos.sh"
+      ],
+      "environment_vars": [
+        "AUTOLOGIN={{user `autologin`}}",
+        "CHEF_VERSION={{user `chef_version`}}",
+        "INSTALL_VAGRANT_KEYS={{user `install_vagrant_keys`}}",
+        "NOCM={{user `nocm`}}",
+        "PASSWORD={{user `password`}}",
+        "UPDATE_SYSTEM={{user `update_system`}}",
+        "USERNAME={{user `username`}}"
+      ],
+      "type": "shell"
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "compression_level": "9",
+      "output": "macos-{{.Provider}}.box",
+      "vagrantfile_template": "Vagrantfile"
+    }
+  ]
+}

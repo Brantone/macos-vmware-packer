@@ -1,0 +1,5 @@
+.DS_Store
+*.swp
+output/
+packer_cache/
+output-vmware-iso/
